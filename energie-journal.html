@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Energie-journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f2ed; --surface: #fffefb; --surface2: #f0ece5; --border: #ddd8cf;
+    --mint: #7bbfaa; --mint-light: #c8e6dc; --mint-dark: #4e9a82;
+    --text: #2c2825; --text-muted: #8a837a; --accent: #c97b5a;
+    --radius: 14px; --radius-sm: 8px; --shadow: 0 2px 16px rgba(44,40,37,0.08);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; }
+  .app { max-width: 480px; margin: 0 auto; padding: 20px 16px 60px; }
+  .header { text-align: center; margin-bottom: 20px; }
+  .header h1 { font-family: 'Lora', serif; font-size: 1.6rem; letter-spacing: -0.02em; }
+  .header p { color: var(--text-muted); font-size: 0.82rem; margin-top: 4px; font-style: italic; }
+
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 12px; padding: 4px; margin-bottom: 20px; }
+  .tab { flex: 1; text-align: center; padding: 10px 4px; border-radius: 9px; cursor: pointer; font-size: 0.8rem; font-weight: 500; color: var(--text-muted); transition: all 0.2s; border: none; background: none; font-family: 'DM Sans', sans-serif; }
+  .tab.active { background: var(--surface); color: var(--mint-dark); box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .form-card { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .field-title { font-family: 'Lora', serif; font-size: 0.95rem; font-weight: 600; color: var(--text); text-transform: none; letter-spacing: 0; }
+
+  .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .type-btn { border: 1.5px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); padding: 10px 6px; cursor: pointer; text-align: center; font-size: 0.78rem; font-family: 'DM Sans', sans-serif; color: var(--text-muted); transition: all 0.15s; line-height: 1.4; }
+  .type-btn.selected { border-color: var(--mint); background: var(--mint-light); color: var(--mint-dark); font-weight: 500; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  input[type=number], select, textarea {
+    width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); background: var(--surface);
+    outline: none; transition: border-color 0.15s; -webkit-appearance: none;
+  }
+  input[type=number]:focus, select:focus, textarea:focus { border-color: var(--mint); }
+  textarea { resize: vertical; min-height: 90px; }
+
+  .slider-wrap { display: flex; align-items: center; gap: 12px; }
+  .slider-wrap input[type=range] {
+    flex: 1; -webkit-appearance: none; height: 8px; border-radius: 4px; outline: none; border: none; padding: 0;
+    background: linear-gradient(to right, var(--mint) 0%, var(--mint) var(--pct,50%), var(--border) var(--pct,50%), var(--border) 100%);
+  }
+  .slider-wrap input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--mint-dark);
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .slider-val { min-width: 32px; text-align: center; font-family: 'Lora', serif; font-size: 1.2rem; font-weight: 600; color: var(--mint-dark); }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+  .diff-display { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; text-align: center; font-size: 0.85rem; color: var(--text-muted); }
+  .drain-badge { font-family: 'Lora', serif; font-size: 1.3rem; font-weight: 600; }
+  .diff-neg { color: var(--accent); }
+  .diff-pos { color: var(--mint-dark); }
+
+  .btn-save { width: 100%; padding: 14px; background: var(--mint-dark); color: white; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 500; cursor: pointer; margin-top: 4px; }
+  .btn-save:active { background: var(--mint); }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--mint-dark); color: white; padding: 12px 24px; border-radius: 30px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  .entry-list { display: flex; flex-direction: column; gap: 10px; }
+  .entry-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); border: 1px solid var(--border); cursor: pointer; }
+  .entry-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+  .entry-date { font-size: 0.75rem; color: var(--text-muted); }
+  .entry-type { font-size: 0.75rem; background: var(--mint-light); color: var(--mint-dark); border-radius: 20px; padding: 3px 10px; font-weight: 500; white-space: nowrap; }
+  .entry-energy { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .energy-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+  .energy-bar { height: 100%; border-radius: 4px; }
+  .energy-label { font-size: 0.75rem; color: var(--text-muted); min-width: 62px; }
+  .entry-meta { display: flex; gap: 10px; font-size: 0.75rem; color: var(--text-muted); flex-wrap: wrap; align-items: center; }
+  .entry-notes { font-size: 0.82rem; color: var(--text); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-style: italic; line-height: 1.5; display: none; }
+  .entry-notes.open { display: block; }
+
+  .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-style: italic; line-height: 1.8; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-card { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); text-align: center; }
+  .stat-card .stat-val { font-family: 'Lora', serif; font-size: 2rem; font-weight: 600; color: var(--mint-dark); }
+  .stat-card .stat-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .pattern-section { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 10px; }
+  .pattern-section h3 { font-family: 'Lora', serif; font-size: 0.95rem; margin-bottom: 14px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .bar-label { font-size: 0.75rem; color: var(--text-muted); min-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-outer { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-inner { height: 100%; border-radius: 4px; }
+  .bar-val { font-size: 0.75rem; color: var(--mint-dark); font-weight: 500; min-width: 32px; text-align: right; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Energie-journal</h1>
+    <p>Vergaderingen bijhouden · patronen ontdekken</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('log')">✏️ Loggen</button>
+    <button class="tab" onclick="showTab('overzicht')">📋 Overzicht</button>
+    <button class="tab" onclick="showTab('patronen')">📊 Patronen</button>
+  </div>
+
+  <div class="panel active" id="panel-log">
+    <div class="form-card">
+      <div class="field">
+        <label class="field-title">Type meeting</label>
+        <div class="type-grid">
+          <button class="type-btn" data-val="1-op-1" onclick="selectType(this)">👤 1-op-1</button>
+          <button class="type-btn" data-val="Klein groep" onclick="selectType(this)">👥 Klein groep<br><span style="font-size:0.7em">≤5 pers.</span></button>
+          <button class="type-btn" data-val="Grote groep" onclick="selectType(this)">👥👥 Grote groep<br><span style="font-size:0.7em">>5 pers.</span></button>
+          <button class="type-btn" data-val="Online" onclick="selectType(this)">💻 Online</button>
+          <button class="type-btn" data-val="Hybride" onclick="selectType(this)">🔀 Hybride</button>
+          <button class="type-btn" data-val="Anders" onclick="selectType(this)">… Anders</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Duur (min)</label>
+          <input type="number" id="duur" min="5" max="480" placeholder="30" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Deelnemers</label>
+          <input type="number" id="deelnemers" min="1" max="200" placeholder="3" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label>Energie <strong>voor</strong></label>
+        <div class="slider-wrap">
+          <input type="range" id="energie-voor" min="1" max="10" value="6" oninput="updateSlider(this,'lbl-voor'); updateDiff()">
+          <span class="slider-val" id="lbl-voor">6</span>
+        </div>
+        <div class="slider-labels"><span>🪫 uitgeput</span><span>⚡ vol energie</span></div>
+      </div>
+      <div class="field">
+        <label>Energie <strong>na</strong></label>
+        <div class="slider-wrap">
+          <input type="range" id="energie-na" min="1" max="10" value="4" oninput="updateSlider(this,'lbl-na'); updateDiff()">
+          <span class="slider-val" id="lbl-na">4</span>
+        </div>
+        <div class="slider-labels"><span>🪫 uitgeput</span><span>⚡ vol energie</span></div>
+      </div>
+      <div class="field">
+        <div class="diff-display" id="diff-display">Energieverlies: <span class="drain-badge diff-neg">−2</span></div>
+      </div>
+      <div class="field">
+        <label>Hersteltijd achteraf</label>
+        <select id="herstel">
+          <option value="Geen">Geen — kon direct door</option>
+          <option value="< 15 min">Korte pauze (&lt;15 min)</option>
+          <option value="15–30 min" selected>15–30 minuten</option>
+          <option value="30–60 min">30–60 minuten</option>
+          <option value="> 1 uur">> 1 uur</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Wat was zwaar / notities</label>
+        <textarea id="notities" placeholder="Bijv. veel onderbrekingen, onduidelijke agenda, moest zelf structuur bewaken..."></textarea>
+      </div>
+      <button class="btn-save" onclick="saveEntry()">Opslaan</button>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-overzicht">
+    <div id="entry-list" class="entry-list"></div>
+  </div>
+
+  <div class="panel" id="panel-patronen">
+    <div id="patronen-content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Opgeslagen</div>
+
+<script>
+let selectedType = '';
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['log','overzicht','patronen'][i] === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'overzicht') renderOverzicht();
+  if (name === 'patronen') renderPatronen();
+}
+
+function selectType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedType = btn.dataset.val;
+}
+
+function updateSlider(el, lblId) {
+  const pct = ((el.value - 1) / 9 * 100).toFixed(1);
+  el.style.setProperty('--pct', pct + '%');
+  document.getElementById(lblId).textContent = el.value;
+}
+
+function updateDiff() {
+  const v = parseInt(document.getElementById('energie-voor').value);
+  const n = parseInt(document.getElementById('energie-na').value);
+  const diff = n - v;
+  const sign = diff > 0 ? '+' : '';
+  const cls = diff >= 0 ? 'diff-pos' : 'diff-neg';
+  document.getElementById('diff-display').innerHTML = diff === 0
+    ? 'Energieniveau gelijk gebleven'
+    : `Energie${diff < 0 ? 'verlies' : 'winst'}: <span class="drain-badge ${cls}">${sign}${diff}</span>`;
+}
+
+updateSlider(document.getElementById('energie-voor'), 'lbl-voor');
+updateSlider(document.getElementById('energie-na'), 'lbl-na');
+updateDiff();
+
+function saveEntry() {
+  if (!selectedType) { alert('Kies een type meeting.'); return; }
+  if (!document.getElementById('duur').value) { alert('Vul de duur in.'); return; }
+  const entry = {
+    ts: Date.now(),
+    type: selectedType,
+    duur: parseInt(document.getElementById('duur').value),
+    deelnemers: parseInt(document.getElementById('deelnemers').value) || null,
+    voor: parseInt(document.getElementById('energie-voor').value),
+    na: parseInt(document.getElementById('energie-na').value),
+    herstel: document.getElementById('herstel').value,
+    notities: document.getElementById('notities').value.trim()
+  };
+  const entries = loadEntries();
+  entries.push(entry);
+  localStorage.setItem('energie-journal', JSON.stringify(entries));
+  showToast();
+  resetForm();
+}
+
+function loadEntries() {
+  try { return JSON.parse(localStorage.getItem('energie-journal') || '[]'); }
+  catch(e) { return []; }
+}
+
+function resetForm() {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+  selectedType = '';
+  ['duur','deelnemers','notities'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('energie-voor').value = 6;
+  document.getElementById('energie-na').value = 4;
+  document.getElementById('herstel').value = '15–30 min';
+  updateSlider(document.getElementById('energie-voor'), 'lbl-voor');
+  updateSlider(document.getElementById('energie-na'), 'lbl-na');
+  updateDiff();
+}
+
+function showToast() {
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('nl-BE', { weekday:'short', day:'numeric', month:'short' }) +
+    ' · ' + d.toLocaleTimeString('nl-BE', { hour:'2-digit', minute:'2-digit' });
+}
+
+function energyColor(val) {
+  if (val <= 3) return '#c97b5a';
+  if (val <= 6) return '#e8b87a';
+  return '#7bbfaa';
+}
+
+function renderOverzicht() {
+  const entries = loadEntries().slice().reverse();
+  const el = document.getElementById('entry-list');
+  if (!entries.length) {
+    el.innerHTML = '<div class="empty-state">Nog geen meetings gelogd.<br>Gebruik het ✏️ Loggen-tabblad.</div>';
+    return;
+  }
+  el.innerHTML = entries.map(e => {
+    const drain = e.na - e.voor;
+    const sign = drain >= 0 ? '+' : '';
+    const cls = drain < 0 ? 'diff-neg' : 'diff-pos';
+    return `<div class="entry-card" onclick="toggleNotes(this)">
+      <div class="entry-head">
+        <div class="entry-date">${formatDate(e.ts)}</div>
+        <div class="entry-type">${e.type}</div>
+      </div>
+      <div class="entry-energy">
+        <span class="energy-label">Voor: ${e.voor}/10</span>
+        <div class="energy-bar-wrap"><div class="energy-bar" style="width:${e.voor*10}%;background:${energyColor(e.voor)}"></div></div>
+      </div>
+      <div class="entry-energy">
+        <span class="energy-label">Na: ${e.na}/10</span>
+        <div class="energy-bar-wrap"><div class="energy-bar" style="width:${e.na*10}%;background:${energyColor(e.na)}"></div></div>
+      </div>
+      <div class="entry-meta">
+        <span>⏱ ${e.duur} min</span>
+        ${e.deelnemers ? `<span>👥 ${e.deelnemers} pers.</span>` : ''}
+        <span>😴 ${e.herstel}</span>
+        <span class="drain-badge ${cls}" style="margin-left:auto">${sign}${drain}</span>
+      </div>
+      ${e.notities ? `<div class="entry-notes">${e.notities}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleNotes(card) {
+  const notes = card.querySelector('.entry-notes');
+  if (notes) notes.classList.toggle('open');
+}
+
+function renderPatronen() {
+  const entries = loadEntries();
+  const el = document.getElementById('patronen-content');
+  if (entries.length < 2) {
+    el.innerHTML = '<div class="empty-state">Log minstens 2 meetings<br>om patronen te zien.</div>';
+    return;
+  }
+  const avgDrain = entries.reduce((s,e) => s + (e.na - e.voor), 0) / entries.length;
+  const avgDuur = entries.reduce((s,e) => s + e.duur, 0) / entries.length;
+  const maxDrain = Math.min(...entries.map(e => e.na - e.voor));
+  const byType = {};
+  entries.forEach(e => { if (!byType[e.type]) byType[e.type] = []; byType[e.type].push(e.na - e.voor); });
+  const typeStats = Object.entries(byType).map(([type, d]) => ({
+    type, avg: d.reduce((a,b)=>a+b,0)/d.length, count: d.length
+  })).sort((a,b) => a.avg - b.avg);
+  const byHerstel = {};
+  entries.forEach(e => { byHerstel[e.herstel] = (byHerstel[e.herstel]||0)+1; });
+  const maxAbs = Math.max(...typeStats.map(t => Math.abs(t.avg)), 1);
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${entries.length}</div><div class="stat-lbl">Meetings gelogd</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:${avgDrain<0?'var(--accent)':'var(--mint-dark)'}">${avgDrain>0?'+':''}${avgDrain.toFixed(1)}</div><div class="stat-lbl">Gem. energieverschil</div></div>
+      <div class="stat-card"><div class="stat-val">${Math.round(avgDuur)} min</div><div class="stat-lbl">Gem. duur</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${maxDrain}</div><div class="stat-lbl">Zwaarste meeting (Δ)</div></div>
+    </div>
+    <div class="pattern-section">
+      <h3>Energiedrain per meetingtype</h3>
+      ${typeStats.map(t => `
+        <div class="bar-row">
+          <div class="bar-label">${t.type} <span style="opacity:.5">(${t.count}×)</span></div>
+          <div class="bar-outer"><div class="bar-inner" style="width:${Math.abs(t.avg)/maxAbs*100}%;background:${t.avg<-3?'var(--accent)':t.avg<0?'#e8b87a':'var(--mint)'}"></div></div>
+          <div class="bar-val" style="color:${t.avg<0?'var(--accent)':'var(--mint-dark)'}">${t.avg>0?'+':''}${t.avg.toFixed(1)}</div>
+        </div>`).join('')}
+      <p style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;font-style:italic">Negatief = energieverlies.</p>
+    </div>
+    <div class="pattern-section">
+      <h3>Hersteltijd achteraf</h3>
+      ${Object.entries(byHerstel).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `
+        <div class="bar-row">
+          <div class="bar-label">${k}</div>
+          <div class="bar-outer"><div class="bar-inner" style="width:${v/entries.length*100}%;background:var(--mint)"></div></div>
+          <div class="bar-val">${v}×</div>
+        </div>`).join('')}
+    </div>`;
+}
+</script>
+</body>
+</html>
